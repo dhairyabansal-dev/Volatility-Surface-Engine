@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -28,14 +29,14 @@ with st.sidebar:
 
 chain = synthetic_chain(S=S, r=r, base_vol=base_vol)
 
-# Recover IV from market prices rather than simply displaying the synthetic input volatility.
+# Recover IV from option prices rather than simply displaying the synthetic input volatility.
 calls = chain[chain["option_type"] == "call"].copy()
 solved = []
 for row in calls.itertuples(index=False):
     iv, method, history = implied_volatility(row.market_price, S, row.strike, row.expiry, r, "call")
     solved.append((row.strike, row.expiry, row.market_price, iv, method, len(history)))
 
-iv_chain = __import__("pandas").DataFrame(
+iv_chain = pd.DataFrame(
     solved, columns=["strike", "expiry", "market_price", "implied_vol", "solver", "iterations"]
 )
 
@@ -43,7 +44,7 @@ left, right = st.columns(2)
 with left:
     st.subheader("Option Greeks")
     greek = all_greeks(S, 100.0, 0.5, r, base_vol, "call")
-    st.dataframe(__import__("pandas").DataFrame([greek]), use_container_width=True)
+    st.dataframe(pd.DataFrame([greek]), use_container_width=True)
 with right:
     st.subheader("Solved IV Chain")
     st.dataframe(iv_chain.head(12), use_container_width=True)
@@ -73,7 +74,6 @@ scenario = option_scenario(
     S, 100.0, 0.5, r, base_vol, "call",
     spot_shock=spot_shock, vol_shock=vol_shock, time_decay=time_decay,
 )
-metrics = __import__("pandas").DataFrame([scenario])
-st.dataframe(metrics, use_container_width=True)
+st.dataframe(pd.DataFrame([scenario]), use_container_width=True)
 
 st.info("V1 uses a deterministic synthetic option chain so the full engine runs without API keys. Real market-data ingestion is planned for V2.")
